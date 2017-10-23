@@ -23,6 +23,9 @@ def conncheck(request):
     user = reddit.user.me()
     return render(request, 'redditbot/conncheck.html', {'user':user})
 
+def hunt(request):
+    user = reddit.user.me()
+    return render(request, 'redditbot/conncheck.html', {'user':user})
 
 
 def hunter(request):
