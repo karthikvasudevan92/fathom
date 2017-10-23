@@ -1,0 +1,21 @@
+{% extends "redditbot/base.html "%}
+{% block title%} Bot Home {% endblock title%}
+{% block searchpalette %}
+<div class="row">
+    <div class="col-md-9">
+        <div class="panel panel-default">
+            <div class="panel-heading">Search Options</div>
+            <div class="panel-body">
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock searchpalette %}
+{% block resultposts %}
+<div class="row">
+    <div class="col-md-9">
+        {{analysis}}
+    </div>
+</div>
+{% endblock resultposts %}

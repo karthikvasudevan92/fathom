@@ -1,0 +1,131 @@
+nav.navbar{
+    padding-left: 20px;
+    background-color: #012C40;
+}
+
+body>.wrapper{
+    background-color: #DAEBF2;
+}
+input[type=text]{
+    padding-left: 3px;
+}
+ul.submissionslist > li{
+    display: none;
+}
+ul.submissionslist > li.hascomment{
+    display: list-item;
+}
+ul.commentlist > li{
+    display: none;
+}
+ul.commentlist > li.hasdigit{
+    display: list-item;
+}    
+blockquote.splitcommentwrap{
+    display: none;
+    background-color: white;
+}
+blockquote.splitcommentwrap.hasdigit{
+    display: block;
+}
+
+.numcircle{
+    border-radius: 50%;
+    behavior: url(PIE.htc); /* remove if you don't care about IE8 */
+
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    display: inline-block;
+    background: #fff;
+    border: 2px solid #666;
+    color: #666;
+    text-align: center;
+
+    font: 15px Arial, sans-serif;
+}
+
+li.comment-word{
+    display: none;
+}
+li.comment-word.exists  span{
+background-color: lightblue;
+}
+
+li.comment-word.strange  span{
+background-color: lightcyan;
+font-size: 1.1em;
+}
+
+li.comment-word.hasdigit{
+    display: list-item;
+}
+li.comment-word.hasdigit  span{
+    font-size: 1.2em;
+}    
+li.comment-word  span.bracesymbol{
+    display: none;
+}
+li.comment-word.hasdigit  span.wordtext{
+font-size: 1.3em;
+text-decoration: underline;
+}    
+span.wordtext{
+font-size: 1.3em;
+text-decoration: underline;
+}
+
+.scrollsill{
+    height: 300px;
+    overflow-y: scroll;
+}
+.candidateslist h4{
+font-size: 1em;
+}
+p.words{
+    font-size: 1.4em;
+}
+
+p.words span{
+    background-color: rgba(60, 105, 60, 0.1);
+    padding: 1px 5px;
+    line-height: 1.5;
+    cursor: pointer;
+}   
+p.words span.named_entity{
+    background-color: darkgreen;
+    color: whitesmoke;
+}    
+p.words span.is_candidate.is_the_candidate{
+    background-color: rgba(75, 237, 75, 0.50);        
+    color: azure;
+}    
+p.words span.is_candidate{
+    background-color:darkorange;    
+}    
+p.words span.is_quantity{
+    color:whitesmoke;
+    background-color: black;
+}    
+
+.candidateslist h3{
+    display:inline-block;
+}
+
+
+.panel .progress{
+    margin-top: 20px;
+}
+
+input[type=text]{
+    margin-bottom: 2px;
+    padding: 3px;
+    font-size: 1.4em;
+}
+
+#candidate_fetch select{
+    padding: 3px;
+    font-size: 1.4em;
+    border: 2px solid aqua;
+    background-color: aqua;
+}

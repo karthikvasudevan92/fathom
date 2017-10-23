@@ -1,0 +1,19 @@
+{% extends "redditbot/base.html "%}
+{% block appbody %}
+<div>
+    <h2>Front Page:</h2>
+    <p>{{subreddit}}</p>
+    <ul>
+        {%for submission in submissions%}
+        <li>
+            {{submission.title}}
+            <ul>
+                {% for comment in submission.comments %}
+                <li>{{comment.body}}</li>
+                {% endfor%}
+            </ul>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock appbody %}

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'redditbot/bot.css'%}">
+    <link rel="stylesheet" href="{% static 'home/bootstrap/css/bootstrap.min.css'%}">
+
+    <script src="{% static 'home/jquery-3.2.1.min.js' %}"></script>
+    <script src="{% static 'home/bootstrap/js/bootstrap.min.js' %}"></script>
+    <title>
+        {% block title %} Redditbot {% endblock title %}
+    </title>
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="row">
+            <nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="/bot">Fathom/redditbot</a>
+                    </div>
+                    <ul class="nav navbar-nav">
+                        {% block navbar %}
+                        <li><a href="/bot">Home</a></li>
+                        <li><a href="/bot/posts">Posts</a></li>
+                        {% endblock %}
+                    </ul>
+                </div>
+            </nav>
+        </div>
+        <div class="searchpalette row">
+            <div class="col-md-1"></div>
+            <div class="col-md-8">
+                <div class="">
+                    {% block searchpalette %}{% endblock searchpalette %}
+                </div>
+            </div>
+        </div>
+        <div class="resultposts row">
+            <div class="col-md-1"></div>
+            <div class="col-md-8">
+                <div class="">
+                    <form method="POST" class="post-form">{% csrf_token %}
+                        {{ form.as_p }}
+                        <textarea name="" id="" cols="30" rows="10"></textarea>
+                        <button type="submit" class="save btn btn-default">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="appfooter">
+            Footer
+        </div>
+    </div>
+</body>
+
+</html>

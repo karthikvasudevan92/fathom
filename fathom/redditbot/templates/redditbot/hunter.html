@@ -1,0 +1,87 @@
+{% extends "redditbot/base.html "%}
+{% block title%}**Hunter**{% endblock title%}
+{% block searchpalette %}
+<div class="row">
+    <div class="col-md-9">
+        <div class="panel panel-default">
+            <div class="panel-heading">Search Options</div>
+            <div class="panel-body">
+                <form action="" id="candidate_fetch">
+                    <input type="text" name="p" placeholder="post id"><br>
+                    <input type="text" placeholder="subreddits" name="s"><br>
+                    <select name="subreddit_list" id="subreddit">
+                        {% for subreddit in fodder.subreddits %}
+                        <option value="{{subreddit.name}}">{{subreddit.name}}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" name="add_subreddit">add subreddit</button><br>
+                    <input type="text" name="l" size="2" placeholder="limit" value="2"><br><br>
+                    <button type="button" name="getsubs"><span class="glyphicon glyphicon-screenshot"></span> get</button>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%; min-width:2em;">
+                        </div>
+                     </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+    </div>
+</div>
+{% endblock searchpalette %}
+{% block resultposts %}
+<div class="row" id="results">
+    <div class="col-md-9">
+        <h2>Found {{analysis.count}} candidates within {{analysis.comment_count}} comments in {{analysis.submission_count}} submissions ({{analysis.submissions_searched}} submissions searched).</h2>
+        <h3>in {{analysis.execution_time}}</h3>
+        <ul class="list-unstyled candidateslist">
+            {% for word_candidate in analysis.word_candidates %}
+            <li id="candidate{{forloop.counter}}" class="{{submission.hascomment}}">
+                <div class="well well-lg">
+                    <div class="numcircle">
+                        {{forloop.counter}}
+                    </div>
+                    <h3>{{word_candidate.text}}</h3>
+                    <h4>
+                        <a href='http://reddit.com{{word_candidate.candidate_submission.permalink}}' >{{word_candidate.candidate_submission.title}}</a>
+                    </h4>
+                    <div>
+                        <a href="http://reddit.com/r/{{word_candidate.candidate_submission.subreddit}}">{{word_candidate.candidate_submission.subreddit}}</a>
+                        <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>
+                        <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>                        
+                        <a href="">{{word_candidate.candidate_submission.score}}</a>
+                    </div>
+                    <p class="words">
+                        {% for word in word_candidate.comment_words %}
+                        <span class="{{word.class}}" data-toggle="popover" title="{{word}}" data-index="{{word.index}}" quantities="{{word.quantity_matches}}">{{word.word}}</span>
+                        {% endfor %}
+                    </p>
+                    <p>
+                        {{word_candidate.ne}}
+                    </p>
+                    <p>
+                        {{word_candidate.num_list}}
+                    </p>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-3">
+        <div class="well well-lg">
+            <p>Subreddit:<a href="">{{fodder.s}}</a></p>
+            <p>Limit:{{fodder.l}}</p>
+            <p>Post:<a href="">{{fodder.p}}</a></p>
+        </div>
+        <div class="well well-lg">
+            <h3>candidates</h3>
+            <ol>
+                {% for word_candidate in analysis.word_candidates %}
+                <li><a href="#candidate{{forloop.counter}}">{{word_candidate.text}}</a></li>
+                {% endfor %}
+                <li></li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock resultposts %}
