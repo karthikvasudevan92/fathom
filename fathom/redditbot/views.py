@@ -1,13 +1,15 @@
 from django.shortcuts import render
+from django.core.paginator import Paginator
+from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, HttpResponseRedirect
-from .forms import Words
-from .models import Word , Candidate, Aliase, Quantity_aliase, Quantity, Subreddit
-import praw
+from .forms import Words, Subreddit_form
+from .models import Word , Candidate, Aliase, Quantity_aliase, Quantity, Subreddit, Submission, Hunt, Hunt_relation, Object_type
 from pprint import pprint
 from inspect import getmembers
 import nltk
 import re
 from nltk.tokenize import word_tokenize
+import praw
 reddit = praw.Reddit(client_id='dEaiI_xdmIpI1A',
                      client_secret='OgE7mqNf1NNTlHCcBpARvGIbYTE',
                      password='4Heonhoneydewhathfed?',
@@ -23,44 +25,61 @@ def conncheck(request):
     user = reddit.user.me()
     return render(request, 'redditbot/conncheck.html', {'user':user})
 
-def hunt(request):
+def hunts(request):
     user = reddit.user.me()
     return render(request, 'redditbot/conncheck.html', {'user':user})
-
 
 def hunter(request):
     commentlist = []
     submissions = []
-    multis = reddit.multireddit('nsaisspying', 'fathom').subreddits
-    subreddits = Subreddit.objects.all()
-    fodder = {'l':'','s':'','p':'','multis':multis, 'subreddits':subreddits}
-    limit = 1
+    fodder = {
+        'limit':request.GET.get('l'),
+        'subreddits_request':request.GET.get('s'),
+        'path':request.GET.get('p'),
+        'multis':reddit.multireddit('nsaisspying', 'fathom').subreddits,
+        'subreddits_all':Subreddit.objects.all()
+        }
     sub_str = ""
-    path = request.GET.get('p')
-    if request.GET.get('l'):
-        limit = int(request.GET.get('l'))
-    if path:
+    if fodder['limit']:
+        fodder['limit'] = int(request.GET.get('l'))
+    if fodder['path']:
         sub = reddit.submission(id=path)
         submissions.append(sub)
-        fodder['p'] = path
-    elif request.GET.get('s'):
-        subreddits = request.GET.get('s').split(' ')
+    elif fodder['subreddits_request']:
+        subreddits = fodder['subreddits_request'].split(' ')
         for sub_id,subreddit in enumerate(subreddits):
             if sub_id>0:
                 sub_str += "+"+subreddit
             else:
                 sub_str += subreddit
-        fodder['s'] = sub_str
-        fodder['l'] = limit                
-        submissions = reddit.subreddit(sub_str).hot(limit=limit)
-    if request.GET.get('subs'):
-        subs_checked = request.GET.getlist('subs')
-        sub_str = "+".join(subs_checked)
-        fodder['subs'] = sub_str
-        submissions = reddit.subreddit(sub_str).hot(limit=limit)
-    analysis = Candidate.discover_candidates(submissions)
+        fodder['subreddits'] = sub_str             
+        submissions = reddit.subreddit(sub_str).hot(limit=fodder['limit'])
+    hunt = Hunt.objects.create()
+    analysis = Candidate.discover_candidates(submissions,hunt)
     return render(request, 'redditbot/hunter.html',{'analysis':analysis, 'fodder':fodder})
-
+    
+def candidates(request):
+    hunts = Hunt.objects.all().order_by('-id')[:5]
+    content_type = ContentType.objects.get(model='candidate')
+    hunt_id = request.POST.get('h')
+    if hunt_id:
+        hunt = Hunt.objects.get(id=hunt_id)
+    else:
+        hunt = Hunt.objects.latest('id')
+    candidates = Hunt_relation.objects.filter(content_type=content_type,hunt=hunt)
+    oldest = request.POST.get('o')
+    if oldest:
+        p = Paginator(candidates.order_by('id'),50)            
+    else:
+        p = Paginator(candidates.order_by('-id'),50)
+    pagenum = request.POST.get('p')
+    if pagenum:
+        page = p.page(pagenum)
+    else:
+        page = p.page(1)
+    data = {'candidates':page.object_list, 'paginator':page, 'page_range':p.page_range, 'hunts':hunts}
+    return render(request, 'redditbot/candidates.html',{'data':data})
+    
 def addaliases(request):
     analysis = []
     quantities = Quantity.objects.all().filter(isc=0)

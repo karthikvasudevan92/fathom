@@ -25,15 +25,22 @@
                     <div class="collapse navbar-collapse">
                         <ul class="nav navbar-nav">
                             {% block navbar %}
-                            <li><a href="/bot">Home</a></li>
-                            <li><a href="/bot/hunter">hunter</a></li>
-                            <li><a href="/bot/hunts">hunts</a></li>
+                            <li>
+                                <a href="/bot">Home</a>
+                            </li>
+                            <li>
+                                <a href="/bot/hunter">hunter</a>
+                            </li>
+                            <li>
+                                <a href="/bot/candidates">candidates</a>
+                            </li>
                             {% endblock %}
                         </ul>
                     </div>
                 </div>
             </nav>
         </div>
+        {% block base_body %}
         <div class="searchpalette row">
             <div class="col-md-1"></div>
             <div class="col-md-10">
@@ -50,12 +57,15 @@
                 </div>
             </div>
         </div>
+        {% endblock base_body %}
         <div class="appfooter">
             <div class="row">
                 <div class="col-md-1"></div>
                 <div class="col-md-8">
                     <div class="">
-                        <h3>footer</h3>
+                        <p>
+                            <span class="label label-info">Footer</span>
+                        </p>
                     </div>
                 </div>
             </div>

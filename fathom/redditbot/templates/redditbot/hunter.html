@@ -1,5 +1,4 @@
-{% extends "redditbot/base.html "%}
-{% block title%}**Hunter**{% endblock title%}
+{% extends "redditbot/base.html "%} {% block title%}**Hunter**{% endblock title%}
 {% block searchpalette %}
 <div class="row">
     <div class="col-md-9">
@@ -7,21 +6,46 @@
             <div class="panel-heading">Search Options</div>
             <div class="panel-body">
                 <form action="" id="candidate_fetch">
-                    <input type="text" name="p" placeholder="post id"><br>
-                    <input type="text" placeholder="subreddits" name="s"><br>
-                    <select name="subreddit_list" id="subreddit">
-                        {% for subreddit in fodder.subreddits %}
-                        <option value="{{subreddit.name}}">{{subreddit.name}}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="button" name="add_subreddit">add subreddit</button><br>
-                    <input type="text" name="l" size="2" placeholder="limit" value="2"><br><br>
-                    <button type="button" name="getsubs"><span class="glyphicon glyphicon-screenshot"></span> get</button>
-                    <div class="progress">
-                        <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%; min-width:2em;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <br>
+                            <div class="input-group">
+                                <span class="input-group-addon">subreddits to search:</span>
+                                <input class="form-control emph1" type="text" placeholder="subreddits" name="s">
+                            </div>
+                            <br>
+                            <select name="subreddit_list" id="subreddit">
+                                {% for subreddit in fodder.subreddits_all %}
+                                <option value="{{subreddit.name}}">{{subreddit.name}}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" name="add_subreddit">add subreddit</button>
+                            <div class="input-group">
+                                <span class="input-group-addon">https://redd.it/</span>
+                                <input class="form-control emph1" type="text" name="p" placeholder="post id">
+                            </div>
+                            <br>
                         </div>
-                     </div>
+                        <div class="col-md-4"></div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <span class="input-group-addon">limit</span>
+                                <input class="form-control" type="text" name="l" size="2" placeholder="limit" value="2">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <button type="button" name="getsubs">
+                                <span class="glyphicon glyphicon-screenshot"></span>get</button>
+                        </div>
+                    </div>
                 </form>
+            </div>
+            <div class="panel-footer">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                        style="width: 0%; min-width:2em;">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -32,7 +56,8 @@
 {% block resultposts %}
 <div class="row" id="results">
     <div class="col-md-9">
-        <h2>Found {{analysis.count}} candidates within {{analysis.comment_count}} comments in {{analysis.submission_count}} submissions ({{analysis.submissions_searched}} submissions searched).</h2>
+        <h2>Found {{analysis.count}} candidates within {{analysis.comment_count}} comments in {{analysis.submission_count}} submissions
+            ({{analysis.submissions_searched}} submissions searched).</h2>
         <h3>in {{analysis.execution_time}}</h3>
         <ul class="list-unstyled candidateslist">
             {% for word_candidate in analysis.word_candidates %}
@@ -43,12 +68,12 @@
                     </div>
                     <h3>{{word_candidate.text}}</h3>
                     <h4>
-                        <a href='http://reddit.com{{word_candidate.candidate_submission.permalink}}' >{{word_candidate.candidate_submission.title}}</a>
+                        <a href='http://reddit.com{{word_candidate.candidate_submission.permalink}}'>{{word_candidate.candidate_submission.title}}</a>
                     </h4>
                     <div>
                         <a href="http://reddit.com/r/{{word_candidate.candidate_submission.subreddit}}">{{word_candidate.candidate_submission.subreddit}}</a>
                         <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>
-                        <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>                        
+                        <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>
                         <a href="">{{word_candidate.candidate_submission.score}}</a>
                     </div>
                     <p class="words">
@@ -69,15 +94,21 @@
     </div>
     <div class="col-md-3">
         <div class="well well-lg">
-            <p>Subreddit:<a href="">{{fodder.s}}</a></p>
+            <p>Subreddit:
+                <a href="">{{fodder.s}}</a>
+            </p>
             <p>Limit:{{fodder.l}}</p>
-            <p>Post:<a href="">{{fodder.p}}</a></p>
+            <p>Post:
+                <a href="">{{fodder.p}}</a>
+            </p>
         </div>
         <div class="well well-lg">
             <h3>candidates</h3>
             <ol>
                 {% for word_candidate in analysis.word_candidates %}
-                <li><a href="#candidate{{forloop.counter}}">{{word_candidate.text}}</a></li>
+                <li>
+                    <a href="#candidate{{forloop.counter}}">{{word_candidate.text}}</a>
+                </li>
                 {% endfor %}
                 <li></li>
             </ol>
