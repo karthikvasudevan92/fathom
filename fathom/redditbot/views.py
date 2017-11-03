@@ -3,7 +3,7 @@ from django.core.paginator import Paginator
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, HttpResponseRedirect
 from .forms import Words, Subreddit_form
-from .models import Word , Candidate, Aliase, Quantity_aliase, Quantity, Subreddit, Submission, Hunt, Hunt_relation, Object_type
+from .models import Word , Candidate, Aliase, Quantity_aliase, Quantity, Subreddit, Submission, Hunt, Hunt_relation, Fodder
 from pprint import pprint
 from inspect import getmembers
 import nltk
@@ -15,9 +15,6 @@ reddit = praw.Reddit(client_id='dEaiI_xdmIpI1A',
                      password='4Heonhoneydewhathfed?',
                      user_agent='testscript by /u/nsaisspying',
                      username='nsaisspying')
-
-
-
 def index(request):
     return render(request, 'redditbot/bot.html' , {})
 
@@ -30,43 +27,41 @@ def hunts(request):
     return render(request, 'redditbot/conncheck.html', {'user':user})
 
 def hunter(request):
-    commentlist = []
-    submissions = []
-    fodder = {
-        'limit':request.GET.get('l'),
-        'subreddits_request':request.GET.get('s'),
-        'path':request.GET.get('p'),
-        'multis':reddit.multireddit('nsaisspying', 'fathom').subreddits,
-        'subreddits_all':Subreddit.objects.all()
-        }
-    sub_str = ""
-    if fodder['limit']:
-        fodder['limit'] = int(request.GET.get('l'))
-    if fodder['path']:
-        sub = reddit.submission(id=path)
-        submissions.append(sub)
-    elif fodder['subreddits_request']:
-        subreddits = fodder['subreddits_request'].split(' ')
-        for sub_id,subreddit in enumerate(subreddits):
-            if sub_id>0:
-                sub_str += "+"+subreddit
-            else:
-                sub_str += subreddit
-        fodder['subreddits'] = sub_str             
-        submissions = reddit.subreddit(sub_str).hot(limit=fodder['limit'])
-    hunt = Hunt.objects.create()
-    analysis = Candidate.discover_candidates(submissions,hunt)
-    return render(request, 'redditbot/hunter.html',{'analysis':analysis, 'fodder':fodder})
-    
+    analysis = {}
+    fodders = Fodder.objects.filter(show=1).order_by('-id')
+    if request.GET.get('fodder'):
+        fod = Fodder.objects.get(id=int(request.GET.get('fodder')))
+        hunt = Hunt.objects.create()
+        hunt.fodder = fod
+        submissions = hunt.get_from_reddit()
+        analysis = Candidate.discover_candidates(submissions,hunt)
+    return render(request, 'redditbot/hunter.html',{'analysis':analysis,  'fodders':fodders})
+def hunt(request):
+    data = {'candidates':[]}
+    fodders = Fodder.objects.filter(show=1).order_by('-id')
+    if request.GET.get('fodder'):
+        fod = Fodder.objects.get(id=int(request.GET.get('fodder')))
+        hunt = Hunt.objects.create()
+        hunt.fodder = fod
+        submissions = hunt.get_from_reddit()
+        hunt.discover_candidates(submissions)
+        data['candidates'] = hunt.get_candidates()
+        data['count'] = hunt.candidate_count()
+        data['submissions_searched'] = len(submissions)
+    return render(request, 'redditbot/hunt.html',{'data':data,  'fodders':fodders})
 def candidates(request):
-    hunts = Hunt.objects.all().order_by('-id')[:5]
+    hunts = Hunt.objects.all().order_by('-id')
+    valid_hunts = []
+    for hunt in hunts:
+        if hunt.candidate_count() > 0:
+            valid_hunts.append(hunt)
     content_type = ContentType.objects.get(model='candidate')
     hunt_id = request.POST.get('h')
     if hunt_id:
         hunt = Hunt.objects.get(id=hunt_id)
     else:
-        hunt = Hunt.objects.latest('id')
-    candidates = Hunt_relation.objects.filter(content_type=content_type,hunt=hunt)
+        hunt = valid_hunts[0]
+    candidates = hunt.get_candidates()
     oldest = request.POST.get('o')
     if oldest:
         p = Paginator(candidates.order_by('id'),50)            
@@ -77,7 +72,8 @@ def candidates(request):
         page = p.page(pagenum)
     else:
         page = p.page(1)
-    data = {'candidates':page.object_list, 'paginator':page, 'page_range':p.page_range, 'hunts':hunts}
+    pprint(p.page_range)
+    data = {'candidates':page.object_list, 'paginator':page, 'page_range':p.page_range, 'hunts':valid_hunts}
     return render(request, 'redditbot/candidates.html',{'data':data})
     
 def addaliases(request):
@@ -96,34 +92,3 @@ def addaliases(request):
                     quantity_aliase = Quantity_aliase(quantity=q, aliase=aliase)
                     quantity_aliase.save()
     return render(request, 'redditbot/addbulk_quantity_aliases.html',{'analysis':analysis})    
-
-def addwords(request):
-    # if this is a POST request we need to process the form data
-    if request.method == 'POST':
-        # create a form instance and populate it with data from the request:
-        form = BulkWords(request.POST)
-        # check whether it's valid:
-        if form.is_valid():
-            # process the data in form.cleaned_data as required
-            # ...
-            # redirect to a new URL:
-            return HttpResponseRedirect('/thanks/')
-
-    # if a GET (or any other method) we'll create a blank form
-    else:
-        form = Words()
-
-    return render(request, 'redditbot/addbulk.html', {'form': form})
-
-def bulkwords(request):
-    file = open('words10000.txt')
-    index = 0
-    for line in file.readlines():
-        linestripped = line.rstrip('\n')
-        word = Word(wordstr=linestripped)
-        word.save()
-        index += 1
-        if index == 500:
-            break
-
-    return render(request,  'redditbot/addbulk.html', {})

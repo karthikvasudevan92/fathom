@@ -69,37 +69,31 @@
 {% endblock searchpalette %} {% block resultposts %}
 <div class="row" id="results">
     <div class="col-md-9">
-        <h2>Found {{analysis.count}} candidates within {{analysis.comment_count}} comments in {{analysis.submission_count}} submissions
-            ({{analysis.submissions_searched}} submissions searched).</h2>
-        <h3>in {{analysis.execution_time}}</h3>
+        <h2>Found {{data.count}} candidates ({{data.submissions_searched}} submissions searched).</h2>
+        <h3>in time</h3>
         <ul class="list-unstyled candidateslist">
-            {% for word_candidate in analysis.word_candidates %}
-            <li id="candidate{{forloop.counter}}" class="{{submission.hascomment}}">
+            {% for candidate in data.candidates %}
+            <li id="candidate{{forloop.counter}}" class="">
                 <div class="well well-lg">
                     <div class="numcircle">
                         {{forloop.counter}}
                     </div>
-                    <h3>{{word_candidate.text}}</h3>
+                    <h3>{{candidate.candidate}}</h3>
                     <h4>
-                        <a href='http://reddit.com{{word_candidate.candidate_submission.permalink}}'>{{word_candidate.candidate_submission.title}}</a>
+                        <a href='http://reddit.com/{{candidate.com.sub.sub_link_id}}'>{{candidate.com.sub.tokens}}</a>
                     </h4>
                     <div>
-                        <a href="http://reddit.com/r/{{word_candidate.candidate_submission.subreddit}}">{{word_candidate.candidate_submission.subreddit}}</a>
-                        <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>
-                        <a href="https://redd.it/{{word_candidate.candidate_submission.sub_id}}">{{word_candidate.candidate_submission.sub_id}}</a>
-                        <a href="">{{word_candidate.candidate_submission.score}}</a>
+                        <a href="http://reddit.com/r/{{candidate.com.sub.subreddit}}">{{candidate.com.sub.subreddit}}</a>
+                        <a href="https://redd.it/{{candidate.com.sub.sub_link_id}}">{{candidate.com.sub.sub_link_id}}</a>
+                        <a href="">{{candidate.com.score}}</a>
                     </div>
-                    <p class="words">
-                        {% for word in word_candidate.comment_words %}
-                        <span class="{{word.class}}" data-toggle="popover" title="{{word}}" data-index="{{word.index}}" quantities="{{word.quantity_matches}}">{{word.word}}</span>
+                    {% for sentence in candidate.comment_tokens %}
+                    <p class="words {{sentence.class}}">
+                        {% for word in sentence.sentence %}
+                        <span class="{{word.class}}" data-toggle="" title="{{word.tag.pos}},{{word.class}}" data-index="" quantities="">{{word.word}}</span>                        
                         {% endfor %}
                     </p>
-                    <p>
-                        {{word_candidate.ne}}
-                    </p>
-                    <p>
-                        {{word_candidate.num_list}}
-                    </p>
+                    {% endfor %}
                 </div>
             </li>
             {% endfor %}
@@ -109,9 +103,9 @@
         <div class="well well-lg">
             <h3>candidates</h3>
             <ol>
-                {% for word_candidate in analysis.word_candidates %}
+                {% for candidate in data.candidates %}
                 <li>
-                    <a href="#candidate{{forloop.counter}}">{{word_candidate.text}}</a>
+                    <a href="#candidate{{forloop.counter}}">{{candidate.candidate}}</a>
                 </li>
                 {% endfor %}
                 <li></li>

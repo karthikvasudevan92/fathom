@@ -6,6 +6,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from nltk.tokenize import word_tokenize, sent_tokenize
 import re
 import nltk
+from datetime import datetime, timezone
 import time
 import praw
 from praw.models import MoreComments
@@ -92,15 +93,95 @@ class Quantity_aliase(models.Model):
         return (self.quantity.name+" - "+self.aliase.word) 
     class Meta:
         db_table = "quantity_aliase"
-class Object_type(models.Model):
-    name = models.CharField(max_length=15)
+class Subreddit(models.Model):
+    name = models.CharField(max_length=30)
     def __str__(self):
         return self.name
+    def save(self,hunt):
+        subreddit = Subreddit.objects.filter(name=self.name) 
+        if subreddit:
+            self.id = subreddit[0].id
+        else:
+            super(Subreddit, self).save()
+            hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__.lower())             
+            print("*subreddit saved - ", self.id, " - ", self.name)
     class Meta:
-        db_table = "object_type"
+        db_table = 'subreddit'
+class Fodder(models.Model):
+    lim = models.PositiveIntegerField()
+    subreddits = models.ManyToManyField(Subreddit)
+    name = models.CharField(max_length=20)
+    path = models.CharField(max_length=30,blank=True)
+    show = models.BooleanField(default=0)
+    def sub_str(self):
+        return '+'.join([subreddit.name for subreddit in self.subreddits.all()])
+    def __str__(self):
+        return self.name
+    def save(self):
+        super(Fodder, self).save()
+    class Meta:
+        db_table = "fodder"
 class Hunt(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    fodder = models.ForeignKey(
+        'Fodder',
+        blank=True,
+        on_delete=models.CASCADE
+    )
     def __str__(self):
         return str(self.id)
+    def get_from_reddit(self):
+        submissions = []
+        reddit = praw.Reddit(client_id='dEaiI_xdmIpI1A',
+                     client_secret='OgE7mqNf1NNTlHCcBpARvGIbYTE',
+                     password='4Heonhoneydewhathfed?',
+                     user_agent='testscript by /u/nsaisspying',
+                     username='nsaisspying')
+        if self.fodder.path:
+            sub = reddit.submission(id=self.fodder.path)
+            submissions.append(sub)
+        elif self.fodder.subreddits.count()>0:
+            submissions = reddit.subreddit(self.fodder.sub_str()).hot(limit=self.fodder.lim)
+        return submissions
+    def discover_candidates(self,reddit_submissions):
+        start_time = time.time()
+        match_number = re.compile('-?\ *[0-9]+\.?[0-9]*(?:[Ee]\ *-?\ *[0-9]+)?')
+        pprint("Starting discovery.")
+        for sub_index,reddit_submission in enumerate(reddit_submissions):
+            subreddit = Subreddit(name=reddit_submission.subreddit.display_name)
+            subreddit.save(self)
+            submission = Submission(sub_link_id=reddit_submission,title=reddit_submission.title,subreddit=subreddit,score=reddit_submission.score)
+            submission.save(self)
+            has_comments = False
+            for com_index, reddit_comment in enumerate(reddit_submission.comments):
+                if isinstance(reddit_comment, MoreComments):
+                    continue
+                comment = Comment(com_link_id=reddit_comment,body=reddit_comment.body,sub=submission,score=reddit_comment.score)
+                try:
+                    comment.save()
+                except:
+                    print('Couldnt save comment')
+                    pprint(comment)
+                    continue
+                sentences = submission.comment_tokens()
+                for sentence in sentences:
+                    for word in sentence:
+                        candidate = Candidate(candidate=word.word,word_index=word.word_index,word_tag=word.tag,com=comment)
+                        if candidate.candidature():
+                            try:
+                                candidate.save(self)
+                            except:
+                                print("couldn't save candidate")
+                                pprint(candidate)
+                                continue
+        exec_time = " %s seconds" % (time.time() - start_time)
+        print(exec_time)
+    def get_candidates(self):
+        candidates = Hunt_relation.objects.filter(content_type=ContentType.objects.get(model='candidate'),hunt=self)
+        return candidates        
+    def candidate_count(self):
+        candidates = Hunt_relation.objects.filter(content_type=ContentType.objects.get(model='candidate'),hunt=self)
+        return len(candidates)
     class Meta:
         db_table = "hunt"
 class Hunt_relation(models.Model):
@@ -140,28 +221,8 @@ class Submission(models.Model):
             hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__)             
             print("*submission saved - ", self.id)
             print("title - ", self.title)            
-    def get_from_reddit():
-        reddit = praw.Reddit(client_id='dEaiI_xdmIpI1A',
-                     client_secret='OgE7mqNf1NNTlHCcBpARvGIbYTE',
-                     password='4Heonhoneydewhathfed?',
-                     user_agent='testscript by /u/nsaisspying',
-                     username='nsaisspying')
     class Meta:
         db_table = 'submission'
-class Subreddit(models.Model):
-    name = models.CharField(max_length=30)
-    def __str__(self):
-        return self.name
-    def save(self,hunt):
-        subreddit = Subreddit.objects.filter(name=self.name) 
-        if subreddit:
-            self.id = subreddit[0].id
-        else:
-            super(Subreddit, self).save()
-            hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__.lower())             
-            print("*subreddit saved - ", self.id, " - ", self.name)
-    class Meta:
-        db_table = 'subreddit'
 class Comment(models.Model):
     com_link_id = models.CharField(max_length=20)
     body = models.TextField()
@@ -201,12 +262,15 @@ class Candidate(models.Model):
         'Comment',
         on_delete=models.CASCADE
     )
+    def hunt(self): # returns the hunt object that discovered the candidate
+        hunt = Hunt_relation.objects.get(content_type=ContentType.objects.get(model=self.__class__.__name__),object_id=self.id).hunt
+        return hunt
     def __str__(self):
         return self.candidate
     def save(self,hunt):
-        cand = Candidate.objects.filter(candidate=self.candidate,word_index=self.word_index,com=self.com) 
-        if cand:
-            self.id = cand[0].id
+        cand_exists = Candidate.objects.filter(candidate=self.candidate,word_index=self.word_index,com=self.com) 
+        if cand_exists:
+            self.id = cand_exists[0].id
         else:
             super(Candidate, self).save()
             hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__.lower()) 
@@ -220,7 +284,7 @@ class Candidate(models.Model):
             entities = re.findall(r'NE\s(.*?)/',str(nltk.ne_chunk(sent_tagged, binary=True)))
             for word_index_sentence,word in enumerate(sentence):
                 tag = {'pos':sent_tagged[word_index_sentence][1]}
-                wrd = {'word':word,'class':'','tag':tag}
+                wrd = {'word':word,'class':'','tag':tag, 'word_index':word_index_comment}
                 if word_index_comment == self.word_index:
                     wrd['class'] += ' is_candidate'
                     sent['class'] += ' is_candidate_sentence'
@@ -230,6 +294,13 @@ class Candidate(models.Model):
                 word_index_comment += 1
             sentences.append(sent)
         return sentences 
+    def candidature(self):
+        candidature = False
+        has_digit = bool(re.search( r'\d', word ))
+        if has_digit:
+            if len(self.candidate) < 10:
+                candidature = True
+        return candidature
     def is_candidate(word_candidate):
         candidature = False
         word = word_candidate['text']

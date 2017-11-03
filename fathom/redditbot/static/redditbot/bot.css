@@ -133,7 +133,8 @@ input[type=text].emph1{
 #candidate_fetch select{
     padding: 3px;
     font-size: 1.3em;
-    border: 2px solid aqua;
-    background-color: aqua;
-    margin-bottom: 5px;
+    border: 1px solid #cccccc;
+}
+a#add_subreddit{
+    cursor: pointer;
 }

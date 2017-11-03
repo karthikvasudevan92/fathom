@@ -56,10 +56,12 @@ $(document).ready(function () {
         }).done(function(data){
             $('.progress-bar').css('width', '100'+'%').attr('aria-valuenow', 100).text("Finished").removeClass('active');            
             results = $(data).find("#results");
+            pageselect = $(data).find("#page_select > option");
+            $('#candidates-panel-wrapper select#page_select').html(pageselect);
             $(this).html(results);
         });    
     });
-    $('button[name=add_subreddit]').bind('click',function(){
+    $('a#add_subreddit').bind('click',function(){
         var subreddit = $('select[name=subreddit_list]').val();
         var subs_str = $('input[name=s]').val();
         if(subs_str == '')
