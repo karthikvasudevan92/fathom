@@ -37,29 +37,7 @@ $(document).ready(function () {
     });
     $('form#candidates_form *').bind('change',function(){
         var getForm = $(this).closest('form');
-        var page = getForm.find('select').val();
-        valeur = 30;
-        var url = window.location.origin+window.location.pathname;
-        console.log(url);
-        $.ajax({
-            url: url,
-            method:'POST',
-            data:getForm.serialize(),
-            context: $('#result_wrapper'),
-            beforeSend: function(){
-                $('.progress-bar').css('width', valeur+'%').attr('aria-valuenow', valeur).text("Request sent...").addClass('active');
-            },
-            error: function(jqXHR,exception){
-                console.log(jqXHR);
-                console.log(exception);
-            },
-        }).done(function(data){
-            $('.progress-bar').css('width', '100'+'%').attr('aria-valuenow', 100).text("Finished").removeClass('active');            
-            results = $(data).find("#results");
-            pageselect = $(data).find("#page_select > option");
-            $('#candidates-panel-wrapper select#page_select').html(pageselect);
-            $(this).html(results);
-        });    
+        getForm.submit();
     });
     $('a#add_subreddit').bind('click',function(){
         var subreddit = $('select[name=subreddit_list]').val();

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import time
 import praw
 from praw.models import MoreComments
+import traceback
 class Wordtype(models.Model):
     name = models.CharField(max_length=20)
     def __str__(self):
@@ -147,6 +148,7 @@ class Hunt(models.Model):
         start_time = time.time()
         match_number = re.compile('-?\ *[0-9]+\.?[0-9]*(?:[Ee]\ *-?\ *[0-9]+)?')
         pprint("Starting discovery.")
+        pprint(reddit_submissions)
         for sub_index,reddit_submission in enumerate(reddit_submissions):
             subreddit = Subreddit(name=reddit_submission.subreddit.display_name)
             subreddit.save(self)
@@ -158,22 +160,25 @@ class Hunt(models.Model):
                     continue
                 comment = Comment(com_link_id=reddit_comment,body=reddit_comment.body,sub=submission,score=reddit_comment.score)
                 try:
-                    comment.save()
-                except:
+                    comment.save(self)
+                    sentences = comment.words()
+                    for sentence in sentences:
+                        for wrd in sentence:
+                            candidate = Candidate(candidate=wrd['text'],word_index=wrd['word_index'],word_tag=wrd['tag'],com=comment)
+                            if candidate.candidature():
+                                try:
+                                    candidate.save(self)
+                                except Exception:
+                                    print("couldn't save candidate")
+                                    print(e)
+                                    print(traceback.format_exc())
+                                    pprint(candidate)
+                                    continue
+                except Exception as e:
                     print('Couldnt save comment')
+                    print(e)
                     pprint(comment)
                     continue
-                sentences = submission.comment_tokens()
-                for sentence in sentences:
-                    for word in sentence:
-                        candidate = Candidate(candidate=word.word,word_index=word.word_index,word_tag=word.tag,com=comment)
-                        if candidate.candidature():
-                            try:
-                                candidate.save(self)
-                            except:
-                                print("couldn't save candidate")
-                                pprint(candidate)
-                                continue
         exec_time = " %s seconds" % (time.time() - start_time)
         print(exec_time)
     def get_candidates(self):
@@ -219,8 +224,6 @@ class Submission(models.Model):
         else:
             super(Submission, self).save()
             hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__)             
-            print("*submission saved - ", self.id)
-            print("title - ", self.title)            
     class Meta:
         db_table = 'submission'
 class Comment(models.Model):
@@ -234,12 +237,18 @@ class Comment(models.Model):
     def sentences(self):
         return sent_tokenize(self.body)
     def words(self):
+        word_index_comment = 0
         sentences = self.sentences()
         tokenized_sentences = []
-        word_index = 0
         for sentence in sentences:
+            sent = []
             tokenized_sentence = word_tokenize(sentence)
-            tokenized_sentences.append(tokenized_sentence)
+            sent_tagged = nltk.pos_tag(tokenized_sentence)
+            for i,token in enumerate(tokenized_sentence):
+                word = {'text':token,'word_index':word_index_comment,'tag':sent_tagged[i][1]}
+                word_index_comment += 1
+                sent.append(word)
+            tokenized_sentences.append(sent)
         return tokenized_sentences
     def __str__(self):
         return self.body
@@ -250,8 +259,6 @@ class Comment(models.Model):
         else:
             super(Comment, self).save()
             hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__.lower())             
-            print("*comment saved - ", self.id)
-            print("comment body - ", self.body)
     class Meta:
         db_table = 'comment'
 class Candidate(models.Model):
@@ -274,29 +281,39 @@ class Candidate(models.Model):
         else:
             super(Candidate, self).save()
             hunt_relation = Hunt_relation(hunt=hunt,object_id=self.id).save(self.__class__.__name__.lower()) 
-            print("Candidate saved - ", self.id, " - ", self.candidate)
+            pprint(getmembers(self))
     def comment_tokens(self):
+        comment_tokens = {'sentences':[],'has_quantities':False} 
         word_index_comment = 0
-        sentences = []
-        for sentence in self.com.words():
-            sent = {'sentence':[],'class':''}
+        aliases = Aliase.objects.all()
+        for sentence in self.com.sentences():
+            sent = {'sentence':[],'class':'','quantities':[]}
+            tokens = word_tokenize(sentence)
             sent_tagged = nltk.pos_tag(sentence)
             entities = re.findall(r'NE\s(.*?)/',str(nltk.ne_chunk(sent_tagged, binary=True)))
-            for word_index_sentence,word in enumerate(sentence):
+            for word_index_sentence,word in enumerate(tokens):
                 tag = {'pos':sent_tagged[word_index_sentence][1]}
-                wrd = {'word':word,'class':'','tag':tag, 'word_index':word_index_comment}
+                wrd = {'word':word,'class':'','tag':tag, 'is_quantity_aliase':False , 'word_index':word_index_comment}
                 if word_index_comment == self.word_index:
                     wrd['class'] += ' is_candidate'
                     sent['class'] += ' is_candidate_sentence'
                 if word in entities:
-                    wrd['class'] += ' named_entity'                    
+                    wrd['class'] += ' named_entity'         
+                for aliase in aliases:
+                    if(word==aliase.word):
+                        q_a = Quantity_aliase.objects.get(aliase=aliase)
+                        quantity = q_a.quantity
+                        wrd['is_quantity_aliase'] = True
+                        wrd['class'] += ' is_aliase'         
+                        sent["quantities"].append(quantity)
+                        comment_tokens['has_quantities'] = True
                 sent['sentence'].append(wrd)
                 word_index_comment += 1
-            sentences.append(sent)
-        return sentences 
+            comment_tokens['sentences'].append(sent)
+        return comment_tokens 
     def candidature(self):
         candidature = False
-        has_digit = bool(re.search( r'\d', word ))
+        has_digit = bool(re.search( r'\d', self.candidate ))
         if has_digit:
             if len(self.candidate) < 10:
                 candidature = True
@@ -309,104 +326,6 @@ class Candidate(models.Model):
             if len(word)<10:
                candidature = True
         return candidature
-    def discover_candidates(submissions,hunt):
-        start_time = time.time()
-        match_number = re.compile('-?\ *[0-9]+\.?[0-9]*(?:[Ee]\ *-?\ *[0-9]+)?')
-        discovery = {
-                'hunt':hunt,
-                'count':0,
-                'candidatecount': 0,
-                'comment_count':0,
-                'submission_count':0,
-                'submissions_searched':0,
-                'word_candidates':[],
-            }
-        pprint("Starting discovery.")
-        pprint(hunt.id)
-        for submission_index,submission in enumerate(submissions):
-            subreddit_obj = Subreddit(name=submission.subreddit.display_name)
-            subreddit_obj.save(hunt)
-            submission_obj = Submission(sub_link_id=submission,title=submission.title,subreddit=subreddit_obj,score=submission.score)
-            submission_obj.save(hunt)
-            comment_list = [] 
-            discovery['submissions_searched'] += 1
-            has_comments = False
-            for comment_index,comment in enumerate(submission.comments):
-                if isinstance(comment, MoreComments):
-                    continue
-                words = word_tokenize(comment.body)
-                comment_body = " ".join(words)
-                com_obj = Comment(com_link_id=comment,body=comment_body,sub=submission_obj,score=comment.score)
-                try:
-                    com_obj.save(hunt)
-                except:
-                    print("couldn't print")
-                    print(comment_body)
-                    continue
-                comment_obj = {'index':comment_index, 'words':[]}
-                comment_processed_index = 0
-                commit_comment = False
-                has_candidates = False
-                words_tagged = nltk.pos_tag(words)
-                for word_index,word in enumerate(words):
-                    candidature = False
-                    word_tag = words_tagged[word_index][1]
-                    word_candidate = {'text': word , 'word_index':word_index , 'word_tag': word_tag, 'num_list':[] , 'comment_words':[], 'comment_before':[], 'comment_after': []}
-                    candidature = Candidate.is_candidate(word_candidate)
-                    if candidature:
-                        word_candidate_obj = Candidate(candidate=word,word_index=word_index,word_tag=word_tag,com=com_obj)
-                        word_candidate_obj.save(hunt)
-                        has_candidates = True
-                        word_candidate['num_list'] = [float(x) for x in re.findall(match_number, word)]
-                        has_digit = True
-                        sub_id = submission_obj.sub_link_id
-                        title = word_tokenize(submission_obj.title)
-                        namedEnt = nltk.ne_chunk(words_tagged, binary=True)
-                        entities = re.findall(r'NE\s(.*?)/',str(namedEnt))
-                        for comment_word_index,comment_word in enumerate(words):
-                            c_word = { 'word': comment_word, 'comment_word_index': comment_word_index , 'class': '', 'quantity_matches':[], 'word_tag':words_tagged[comment_word_index][1] }
-                            if comment_word in entities:
-                                c_word['class'] += 'named_entity'
-                            if (comment_word_index == word_index):
-                                c_word['class'] += ' is_the_candidate'
-                            if (Candidate.is_candidate({ 'text': comment_word })):
-                                c_word['class'] += ' is_candidate'
-                            if comment_index > comment_processed_index or comment_index == 0:
-                                c_word['quantity_matches'] = Quantity.isQuantity({ 'text': comment_word })                                                        
-                                comment_obj['words'].append(c_word)
-                                commit_comment = True
-                            else:
-                                c_word['quantity_matches'] = comment_list[-1]['words'][comment_word_index]['quantity_matches']
-                            if bool(c_word['quantity_matches']):
-                                c_word['class'] += ' is_quantity'
-                            c_word['index'] = comment_word_index
-                            word_candidate['comment_words'].append(c_word)
-                        if commit_comment:
-                            commit_comment = False
-                            comment_processed_index = comment_index
-                            comment_list.append(comment_obj)
-                        word_candidate['candidate_submission'] = {
-                                'title': title,
-                                'sub_id': sub_id,
-                                'subreddit': submission_obj.subreddit,
-                                'permalink':submission.permalink,
-                                'score': submission.score,
-                                'comment':words,
-                            }
-                        word_candidate['ne'] = entities
-                        discovery['word_candidates'].append(word_candidate)
-                        discovery['count'] += 1
-                if has_candidates:
-                    discovery['comment_count'] += 1  
-                    has_comments = True
-            if has_comments:
-                discovery['submission_count'] += 1
-        if discovery['count'] < 1:
-            hunt.delete()
-        pprint("done with discovery.")
-        discovery["execution_time"] = " %s seconds" % (time.time() - start_time)
-        print(discovery["execution_time"])
-        return discovery
 
     class Meta:
         db_table = "candidate"

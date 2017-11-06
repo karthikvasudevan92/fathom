@@ -7,18 +7,18 @@
         <div class="panel panel-default" id="candidates_panel">
             <div class="panel-heading">Candidates</div>
             <div class="panel-body">
-                <form id="candidates_form">
+                <form id="candidates_form" action="" method="POST">
                     {% csrf_token %}
                     <label for="p">page</label>
                     <select name="p" id="page_select">
                         {% for i in data.page_range %}
-                        <option value="{{i}}">{{i}}</option>
+                            <option value="{{i}}">{{i}}</option>
                         {% endfor %}
                     </select>
                     <label for="h">hunt</label>
                     <select name="h" id="">
                         {% for hunt in data.hunts %}
-                            <option value="{{hunt.id}}">{{hunt.id}}({{hunt.candidate_count}}){{hunt.created|naturaltime}}</option>
+                           <option value="{{hunt.id}}">{{hunt.id}}({{hunt.candidate_count}}){{hunt.created|naturaltime}}</option>
                         {% endfor %}
                     </select>
                     <label for="q">has quantity</label>
@@ -44,37 +44,47 @@
     <div class="col-md-9" id="result_wrapper">
         <ul class="list-unstyled candidateslist" id="results">
             {% for candidate in data.candidates %}
-            <li>
-                <div class="well well-lg">
-                    <div class="numcircle">
-                        {{forloop.counter}}
-                    </div>
-                    <h3>{{candidate}}</h3><br>
-                    <h3>{{candidate.content_object.com.sub.tokens}}</h3>
-                    <a href="https://www.reddit.com/{{candidate.content_object.com.sub.sub_link_id}}">
-                        <span class="glyphicon glyphicon-link"></span>
-                    </a>
-                    {% for sentence in candidate.content_object.comment_tokens %}
-                    <p class="words {{sentence.class}}">
-                        {% for word in sentence.sentence %}
-                        <span class="{{word.class}}" data-toggle="" title="{{word.tag.pos}},{{word.class}}" data-index="" quantities="">{{word.word}}</span>                        
-                        {% endfor %}
-                    </p>
-                    {% endfor %}
-                    <a href="https://www.reddit.com/comments/{{candidate.content_object.com.sub.sub_link_id}}//{{candidate.content_object.com.com_link_id}}">
-                        <span class="glyphicon glyphicon-link"></span>
-                    </a>
-                    <div>
-                        <a href="http://reddit.com/r/{{candidate.content_object.com.sub.subreddit}}">{{candidate.content_object.com.sub.subreddit}}</a>
-                        <a href="https://redd.it/{{candidate.content_object.com.sub.sub_link_id}}">{{candidate.content_object.com.sub.subreddit.sub_link_id}}</a>
-                        <a href="https://redd.it/{{candidate.content_object.com.sub.subreddit.sub_link_id}}">{{candidate.content_object.com.sub.subreddit.sub_link_id}}</a>
-                        <a href="">{{candidate.content_object.com.sub.score}}</a>
-                    </div>
-                    <div>
-                        <a href="">{{candidate.content_object.hunt.created|naturaltime}}</a>
-                    </div>
-                </div>
-            </li>
+                {% if candidate.content_object.comment_tokens.has_quantities %}
+                    <li>
+                        <div class="well well-lg">
+                            <div class="numcircle">
+                                {{forloop.counter}}
+                            </div>
+                            <h3>{{candidate}}</h3><br>
+                            <h3>{{candidate.content_object.com.sub.tokens}}</h3>
+                            <a href="https://www.reddit.com/{{candidate.content_object.com.sub.sub_link_id}}">
+                                <span class="glyphicon glyphicon-link"></span>
+                            </a>
+                                {% for sentence in candidate.content_object.comment_tokens.sentences %}
+                                <p class="words {{sentence.class}}">
+                                    {% for word in sentence.sentence %}
+                                    <span class="{{word.class}}" data-toggle="" title="{{word.tag.pos}},{{word.class}}" data-index="" quantities="">{{word.word}}</span>                        
+                                    {% endfor %}
+                                </p>
+                                <p>
+                                    {% for quantity in sentence.quantities %}
+                                    <span>{{quantity.name}}</span>
+                                    {% endfor %}
+                                </p>
+                                {% endfor %}
+                            <a href="https://www.reddit.com/comments/{{candidate.content_object.com.sub.sub_link_id}}//{{candidate.content_object.com.com_link_id}}">
+                                <span class="glyphicon glyphicon-link"></span>
+                            </a>
+                            <div>
+                                <a href="http://reddit.com/r/{{candidate.content_object.com.sub.subreddit}}">{{candidate.content_object.com.sub.subreddit}}</a>
+                                <a href="https://redd.it/{{candidate.content_object.com.sub.sub_link_id}}">{{candidate.content_object.com.sub.subreddit.sub_link_id}}</a>
+                                <a href="https://redd.it/{{candidate.content_object.com.sub.subreddit.sub_link_id}}">{{candidate.content_object.com.sub.subreddit.sub_link_id}}</a>
+                                <a href="">{{candidate.content_object.com.sub.score}}</a>
+                            </div>
+                            <div>
+                                <a href="">{{candidate.content_object.hunt.created|naturaltime}}</a>
+                            </div>
+                            <div>
+                                <span>{{candidate.content_object.id}}</span>
+                            </div>
+                        </div>
+                    </li>
+                {% endif %}
             {% endfor %}
         </ul>
     </div>

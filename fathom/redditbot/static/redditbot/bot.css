@@ -104,6 +104,10 @@ p.words span.named_entity{
     background-color: darkgreen;
     color: whitesmoke;
 }    
+p.words span.is_aliase{
+    background-color: coral;
+    color: whitesmoke;    
+}    
 p.words span.is_candidate.is_the_candidate{
     background-color: rgba(75, 237, 75, 0.50);        
     color: azure;
